@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# Local runtime state and secrets
+data/
+.env
+/labwarden.yaml
+/inventory.yaml

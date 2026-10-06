@@ -1,0 +1,46 @@
+# Hand-declared inventory, read by the `manual` collector.
+# Top-level keys are LabModel collections. Run `labwarden plugins` to see them all.
+
+devices:
+  - name: isp-router
+    kind: router
+    vendor: ISP-provided
+    management_ip: 192.168.1.1
+    roles: [gateway, dhcp, wifi]
+    notes: Combo modem/router from the ISP. Placeholder until a dedicated firewall is installed.
+
+  - name: unmanaged-switch
+    kind: switch
+    hardware:
+      nic_count: 8
+      nic_speeds_mbps: [1000]
+      capabilities: []   # no 802.1Q, so no VLANs
+    notes: Basic 8-port gigabit switch.
+
+  - name: pihole
+    kind: server
+    os: Raspberry Pi OS
+    management_ip: 192.168.1.2
+    roles: [dns]
+    hardware:
+      cpu: Raspberry Pi 4
+      memory_mb: 4096
+      nic_count: 1
+      nic_speeds_mbps: [1000]
+
+  - name: docker-server
+    kind: server
+    management_ip: 192.168.1.10
+    roles: [containers]
+    notes: New server, not set up yet.
+
+subnets:
+  - cidr: 192.168.1.0/24
+    name: home
+    gateway: 192.168.1.1
+    dns_servers: [192.168.1.2]
+
+links:
+  - {a_device: isp-router, b_device: unmanaged-switch, medium: ethernet}
+  - {a_device: unmanaged-switch, b_device: pihole, medium: ethernet}
+  - {a_device: unmanaged-switch, b_device: docker-server, medium: ethernet}
