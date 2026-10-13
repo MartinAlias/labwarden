@@ -1,0 +1,8 @@
+
+Interface: 192.168.4.67 --- 0x5
+  Internet Address      Physical Address      Type
+  192.168.4.1           02-00-00-00-04-01     dynamic
+  192.168.4.2           02-00-00-00-04-02     dynamic
+  192.168.4.255         ff-ff-ff-ff-ff-ff     static
+  224.0.0.22            01-00-5e-00-00-16     static
+  239.255.255.250       01-00-5e-7f-ff-fa     static

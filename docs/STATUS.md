@@ -5,7 +5,7 @@ end of every work session.** The full design is in [PLAN.md](PLAN.md).
 
 _Last updated: 2026-10-13_
 
-## Current phase: Phase 1 in progress (steps 1–3 of 11 done)
+## Current phase: Phase 1 in progress (steps 1–4 of 11 done)
 
 ### Phase 0 – Skeleton ✅ (done 2026-10-06)
 
@@ -21,7 +21,7 @@ _Last updated: 2026-10-13_
 | `manual` collector | `src/labwarden/collectors/manual.py` | Hand-declared inventory YAML. |
 | Config | `src/labwarden/config.py` | YAML + `${VAR}`/`${VAR:-default}` + `.env`. |
 | CLI | `src/labwarden/cli.py` | `version, plugins, check, collect, snapshots, show, diff`. |
-| Tests | `tests/` | 37 tests at end of Phase 0 (98 after the Pi-hole, Docker and Linux SSH collectors). |
+| Tests | `tests/` | 37 tests at end of Phase 0 (124 after the Pi-hole, Docker, Linux SSH and discovery collectors). |
 | CI | `.github/workflows/ci.yml` | ruff + pytest, Ubuntu/Windows × py3.11–3.13. |
 
 ### Phase 1 – MVP 🚧 (in progress)
@@ -80,7 +80,20 @@ fixture outputs** (`tests/fixtures/<plugin>/...`), so no live devices are needed
      - the wrapper's case list matching `COMMANDS`
      - the wrapper refusing injection attempts (it runs the real script under `sh`)
    - Fixtures were written to match the output formats, not recorded from a live host.
-4. **`discovery` collector**: ARP table + ping sweep of configured subnets. nmap service scan is opt-in.
+4. ✅ **`discovery` collector** (`collectors/discovery.py`, done 2026-10-13):
+   - It runs from the LabWarden host and sweeps the configured **IPv4** subnets: one ping per address, `rate` per second (default 50), `concurrency` threads.
+   - Hard limits: `max_hosts` (default 1024, ceiling 4096, checked when options are validated), an `exclude` list, and network/broadcast addresses are never pinged.
+   - It reads ARP *after* the sweep: `/proc/net/arp` on Linux, `arp -a` on Windows, `arp -an` on macOS. Hosts that drop ICMP still show up via ARP, and ARP entries outside the subnets are ignored.
+   - Reverse DNS gives names; otherwise hosts are named `host-a-b-c-d`. Duplicate PTR names get the IP appended.
+   - Opt-in `nmap: true`: `nmap -sT -sV -Pn --top-ports N` per live host. It's a connect scan, so no root is needed. Only open ports become `services`. A missing nmap is a warning.
+   - Local commands (`ping`/`arp`/`nmap`) go through their own `CommandAllowlist`: no shell, IPv4-only regex tokens. `_run_local` re-checks before `subprocess.run`.
+   - Windows gotcha handled: `ping` exits 0 for "Destination host unreachable", so a reply also needs `TTL=` in the output.
+   - Maps to `devices` (tag `discovered`), `interfaces` (named `observed`, holding the MAC from ARP), `addresses` and `services`.
+   - Known gaps:
+     - **Identity:** a discovered `pihole.lan` won't merge with the inventory's `pihole`, because merge matches by name only. Reconciling by IP/MAC is a later task, probably at query time in the MCP/agent layer.
+     - mDNS isn't implemented.
+     - In Docker it needs `network_mode: host`; note this for step 10.
+   - 30 tests in `tests/test_discovery.py`, with fixtures for `/proc/net/arp`, Windows and macOS `arp`, and nmap XML.
 5. **Probes** (`src/labwarden/probes/`): `ping`, `traceroute`, `dns_resolve(server=)`, `tcp_connect`, `http_head`. Each runs locally, or remotely via `linux_ssh` + allowlist. Rate-limited.
 6. **MCP server** (`src/labwarden/mcp_server/`). Uses the official `mcp` SDK (FastMCP) over stdio:
    - Tools read the latest snapshot: inventory search, device get, subnets, routes, DNS, containers, firewall rules, snapshot diff.
@@ -94,7 +107,7 @@ fixture outputs** (`tests/fixtures/<plugin>/...`), so no live devices are needed
    - CLI: `labwarden ask "..."` and `labwarden diagnose "..."`.
 8. **Playbooks** (`src/labwarden/playbooks/*.yaml`): `no_internet`, `dns_failure`, `service_unreachable`.
 9. **Docs generator v1** (`labwarden docs build`): Markdown with a Mermaid topology, IP plan, inventory, containers and exposed ports, plus a changelog from diffs.
-10. **`init` wizard + `deploy/docker-compose.yml`** (labwarden + docker-socket-proxy).
+10. **`init` wizard + `deploy/docker-compose.yml`** (labwarden + docker-socket-proxy). Discovery needs `network_mode: host` (or a separate host-network service) to sweep the real LAN.
 11. **Live Pi-hole hookup (last, by user request):** do these steps in order.
     - Create an app password and confirm `webserver.api.app_sudo` is off.
     - Put `PIHOLE_PASSWORD` in `.env`.

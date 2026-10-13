@@ -38,3 +38,13 @@ targets:
   #     user: labwarden
   #     key_file: ~/.ssh/labwarden_ed25519
   #     # nftables: true                 # needs the sudoers line from the guide
+  #
+  # Discovery: finds hosts nothing else knows about. ARP table + a rate-limited
+  # ping sweep (IPv4, capped at max_hosts). nmap is opt-in; scan only your own
+  # networks. In Docker this needs network_mode: host.
+  # - name: discovery
+  #   plugin: discovery
+  #   options:
+  #     subnets: [192.168.1.0/24]
+  #     # exclude: [192.168.1.1]
+  #     # nmap: true

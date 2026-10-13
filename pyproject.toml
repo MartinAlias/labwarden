@@ -21,6 +21,7 @@ labwarden = "labwarden.cli:app"
 #   [project.entry-points."labwarden.collectors"]
 #   myvendor = "my_package.collector:MyVendorCollector"
 [project.entry-points."labwarden.collectors"]
+discovery = "labwarden.collectors.discovery:DiscoveryCollector"
 docker = "labwarden.collectors.docker:DockerCollector"
 linux_ssh = "labwarden.collectors.linux_ssh:LinuxSshCollector"
 manual = "labwarden.collectors.manual:ManualCollector"

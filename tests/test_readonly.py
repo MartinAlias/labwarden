@@ -51,7 +51,7 @@ def test_unknown_provides_is_rejected() -> None:
 
 def test_all_installed_plugins_pass_the_guard() -> None:
     # Importing a plugin runs the guard; make sure every registered one loaded.
-    assert {"docker", "linux_ssh", "manual", "pihole"} <= set(available_collectors())
+    assert {"discovery", "docker", "linux_ssh", "manual", "pihole"} <= set(available_collectors())
 
 
 class TestAllowlist:
