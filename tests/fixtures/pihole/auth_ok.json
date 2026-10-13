@@ -1,0 +1,1 @@
+{"session": {"valid": true, "totp": false, "sid": "TEST-SID", "csrf": "TEST-CSRF", "validity": 1800, "message": "app-password correct"}, "took": 0.003}

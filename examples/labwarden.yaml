@@ -13,13 +13,16 @@ targets:
     options:
       file: inventory.yaml
 
-  # Coming in Phase 1 (read-only):
+  # Pi-hole v6. Use an *app password* (Settings > Web interface / API) and keep
+  # webserver.api.app_sudo off, so the credential can't change settings.
   # - name: pihole
   #   plugin: pihole
   #   options:
-  #     url: http://192.168.1.2
-  #     password: ${PIHOLE_PASSWORD}
+  #     url: http://192.168.1.2          # scheme://host[:port], no /admin path
+  #     password: ${PIHOLE_PASSWORD}     # put PIHOLE_PASSWORD=... in .env
+  #     # verify_tls: false              # only for https:// with the self-signed cert
   #
+  # Coming in Phase 1 (read-only):
   # - name: docker-server
   #   plugin: docker
   #   options:

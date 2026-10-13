@@ -3,9 +3,9 @@
 Where the project stands and exactly what to do next. **Update this file at the
 end of every work session.** The full design is in [PLAN.md](PLAN.md).
 
-_Last updated: 2026-10-06_
+_Last updated: 2026-10-13_
 
-## Current phase: Phase 0 complete → starting Phase 1
+## Current phase: Phase 1 in progress (step 1 of 10 done)
 
 ### Phase 0 – Skeleton ✅ (done 2026-10-06)
 
@@ -21,19 +21,25 @@ _Last updated: 2026-10-06_
 | `manual` collector | `src/labwarden/collectors/manual.py` | Hand-declared inventory YAML. |
 | Config | `src/labwarden/config.py` | YAML + `${VAR}`/`${VAR:-default}` + `.env`. |
 | CLI | `src/labwarden/cli.py` | `version, plugins, check, collect, snapshots, show, diff`. |
-| Tests | `tests/` | 37 tests, all passing. |
+| Tests | `tests/` | 37 tests at end of Phase 0 (58 after the Pi-hole collector). |
 | CI | `.github/workflows/ci.yml` | ruff + pytest, Ubuntu/Windows × py3.11–3.13. |
 
-### Phase 1 – MVP ⏭️ (next)
+### Phase 1 – MVP 🚧 (in progress)
 
 Work through these in order. Each step should land with tests using **recorded
 fixture outputs** (`tests/fixtures/<plugin>/...`), so no live devices are needed.
 
-1. **`pihole` collector** (`collectors/pihole.py`). Uses the Pi-hole **v6** REST API:
-   - Auth: `POST /api/auth` with the app password gets a session `sid`. Log out with `DELETE /api/auth` at the end. This is the only non-GET call and it doesn't change config. Document it in the guard's docstring.
-   - Read: `/api/config` (DNS upstreams, DHCP settings), `/api/dhcp/leases`, `/api/config/dns/hosts` (local DNS), `/api/stats/summary`.
-   - Maps to: `dns_records`, `dhcp_scopes`, `devices` (from leases, kind=client), `addresses`.
-   - Add `httpx` as a dependency.
+1. ✅ **`pihole` collector** (`collectors/pihole.py`, done 2026-10-13):
+   - Reads `/api/config`, `/api/dhcp/leases` and `/api/info/version`. All three are GET; `/api/config` already includes `dns.hosts`, so `/api/config/dns/hosts` isn't called separately.
+   - Login and logout use `POST`/`DELETE /api/auth` with the `X-FTL-SID` header. An httpx request hook (`_guard_request`) refuses every other non-GET call.
+   - Maps to `devices` (the Pi-hole plus one `client` per lease), `addresses`, `dns_records` (A/AAAA/CNAME), and `dhcp_scopes` + `subnets` when Pi-hole DHCP is active.
+   - Upstream DNS servers and the local domain are stored as Pi-hole device tags (`dns-upstream:…`, `dns-domain:…`), because no entity fits yet. Revisit when the `dns_failure` playbook needs them.
+   - Query stats aren't stored, because they would add diff noise.
+   - If `dhcp.netmask` is unset, the scope's subnet is guessed (/24 if the range fits).
+   - It logs a warning if `webserver.api.app_sudo` is on.
+   - DHCP static reservations (`dhcp.hosts`) aren't parsed yet.
+   - 21 tests in `tests/test_pihole.py`. ⚠️ Fixtures were written from the FTL OpenAPI spec, **not recorded from a real Pi-hole**.
+   - ⏸️ **Live Pi-hole setup is deferred to the very end of Phase 1, at the user's request (2026-10-13).** Nothing has been set up against the real Pi-hole: no app password, no `.env` entry, no `labwarden.yaml` target, no recorded fixtures. Don't suggest doing it before the other Phase 1 steps are finished. See the final step below.
 2. **`docker` collector** (`collectors/docker.py`). Talks HTTP to a **docker-socket-proxy** (`tcp://host:2375`), GET only:
    - `/containers/json?all=1` and `/containers/{id}/json` (privileged, user, restart policy, ports, networks), plus `/networks`.
    - Maps to `containers`, `subnets` (docker networks), `services`.
@@ -57,6 +63,12 @@ fixture outputs** (`tests/fixtures/<plugin>/...`), so no live devices are needed
 8. **Playbooks** (`src/labwarden/playbooks/*.yaml`): `no_internet`, `dns_failure`, `service_unreachable`.
 9. **Docs generator v1** (`labwarden docs build`): Markdown with a Mermaid topology, IP plan, inventory, containers and exposed ports, plus a changelog from diffs.
 10. **`init` wizard + `deploy/docker-compose.yml`** (labwarden + docker-socket-proxy).
+11. **Live Pi-hole hookup (last, by user request):** do these steps in order.
+    - Create an app password and confirm `webserver.api.app_sudo` is off.
+    - Put `PIHOLE_PASSWORD` in `.env`.
+    - Add the `pihole` target to `labwarden.yaml`.
+    - Run `labwarden collect`.
+    - Record scrubbed responses into `tests/fixtures/pihole/` to replace the spec-based ones.
 
 ### Phase 2+
 
@@ -64,13 +76,34 @@ See the roadmap table in [PLAN.md](PLAN.md#phased-roadmap).
 
 ## The user's lab (the real-world test bed)
 
-- **ISP router:** combo modem/router at 192.168.1.1. It's the gateway, DHCP server and Wi-Fi.
-- **Pi-hole:** Raspberry Pi 4 (4 GB) at 192.168.1.2. It's the DNS server.
-- **Docker server:** new box at 192.168.1.10, not set up yet. LabWarden will be deployed here.
-- **Switch:** unmanaged, so no VLANs yet.
-- **Firewall:** none yet. The recommendation is OPNsense on a mini PC with 2+ Intel i226 NICs, plus a managed 802.1Q switch. The OPNsense collector is the first Phase 2 plugin.
+What the user has (confirmed 2026-10-13):
+- **ONT** (fiber) and an **ISP router**. The router is the gateway, DHCP server and Wi-Fi today, and the user believes it supports bridge mode.
+- **Pi-hole** on a Raspberry Pi 4 (4 GB). It is set up and running; its LabWarden hookup is deferred, see Phase 1 step 11.
+- **Server**, not set up yet. It will hold VMs: Linux and Windows machines for **hacking practice**, which must never be exposed to the public. It will run **Proxmox** (user confirmed), with LabWarden in a Docker VM.
+- **Switch**: TP-Link TL-SG108S-M2, 8× 2.5G, **unmanaged** (no web UI, no 802.1Q). The plan buys a managed 2.5G core switch and reuses this one as extra wired ports on Trusted (VLAN 10).
+- **Endpoints**: PCs, phones, etc. The **admin PC is `vexd-pc`**, currently at 192.168.4.67.
+- **Firewall**: none yet. Recommended: OPNsense on a mini PC with 2+ Intel i226 NICs. The OPNsense collector is the first Phase 2 plugin.
 
-These IPs are placeholders from `examples/inventory.yaml`. Confirm the real ones with the user.
+The current LAN is **192.168.4.x** (inferred from vexd-pc's IP; the router's address and the prefix are unconfirmed). The 192.168.1.x IPs in `examples/inventory.yaml` are placeholders and are wrong for this lab.
+
+**Target design (draft v4, 2026-10-13):** https://claude.ai/artifact/4RDKRyGJjjQvpnq9azoqfu
+- Path: ONT → ISP router (bridge) → OPNsense → 802.1Q switch. The switch feeds a VLAN-capable AP and the Proxmox server (one trunk carrying 20/50/99).
+- VLANs on `192.168.<vlan>.0/24`:
+  - 10 Trusted: vexd-pc reserved at .10.67
+  - 20 Servers: Pi-hole .20.2, Docker VM .20.10
+  - 30 IoT
+  - 40 Guest
+  - 50 **Hacking lab**: isolated, no internet by default, nothing can start connections out, DNS from Unbound at .50.1
+  - 99 **Management**: all admin UIs, reachable only from vexd-pc. This is the user's "centralized" answer.
+- User decisions:
+  - bridge mode: yes
+  - management: centralized, as VLAN 99
+  - Trusted → IoT: allowed
+  - **vexd-pc is the only device allowed to make changes**: admin UIs and SSH of OPNsense, switch, AP, Proxmox and Pi-hole, plus access into the hacking lab. Everything else gets DNS and services only.
+  - hypervisor: Proxmox
+  - port forwards: none ever; remote access later via WireGuard/Tailscale on OPNsense
+- Still open: server specs (CPU/RAM/disk).
+- Once confirmed, the plan could become a `manual` inventory file, so LabWarden can compare the real lab against it.
 
 ## Dev environment notes (Windows machine)
 

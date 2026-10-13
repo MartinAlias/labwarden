@@ -8,9 +8,11 @@ DNS, logs), keeps a versioned picture of it, and helps you answer questions like
 fix you apply yourself, and then verifies it. It also documents your lab and
 teaches you how to reach your goals with the hardware you already own.
 
-> **Status:** Phase 0 (foundation). The Lab Model, snapshot history, plugin
-> framework and CLI work today. Live collectors (Pi-hole, Docker, Linux/SSH),
-> the MCP server and the AI agent arrive in Phase 1.
+> **Status:** Phase 0 (foundation) is complete. Phase 1 (MVP) is in progress, and
+> the read-only Pi-hole v6 collector is done. The Docker and Linux/SSH collectors,
+> the MCP server and the AI agent come next. Progress is tracked in
+> [docs/STATUS.md](docs/STATUS.md), with a machine-readable copy in
+> [docs/status.json](docs/status.json).
 
 ## Read-only by design
 
