@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import shlex
-import shutil
 import socket
-import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 from typing import ClassVar
@@ -29,9 +27,7 @@ from labwarden.probes import (
 )
 from labwarden.probes.execution import PROBE_ALLOWLIST, REMOTE_ALLOWLIST
 
-ROOT = Path(__file__).parent.parent
 FIXTURES = Path(__file__).parent / "fixtures" / "probes"
-WRAPPER = ROOT / "deploy" / "ssh" / "labwarden-ssh-wrapper.sh"
 
 
 def _fx(name: str) -> str:
@@ -417,23 +413,16 @@ AGREEMENT_CASES = [
 ]
 
 
-@pytest.mark.skipif(shutil.which("sh") is None, reason="needs a POSIX sh")
 @pytest.mark.parametrize("command", AGREEMENT_CASES)
-def test_wrapper_and_python_allowlist_agree(command: str) -> None:
-    argv = command.split(" ")
-    python_allows = REMOTE_ALLOWLIST.is_allowed(argv)
-    sh = shutil.which("sh")
-    assert sh is not None
-    # PATH is empty, so an accepted command fails at exec (127) instead of running.
-    result = subprocess.run(
-        [sh, str(WRAPPER)],
-        env={"SSH_ORIGINAL_COMMAND": command, "PATH": "/nonexistent"},
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    wrapper_allows = result.returncode != 126
-    assert python_allows == wrapper_allows, (command, result.returncode, result.stderr)
+def test_wrapper_and_python_allowlist_agree(command: str, run_wrapper) -> None:
+    python_allows = REMOTE_ALLOWLIST.is_allowed(command.split(" "))
+    result = run_wrapper(command)
+    assert result.returncode in (0, 126), (command, result.returncode, result.stderr)
+    wrapper_allows = result.returncode == 0
+    assert python_allows == wrapper_allows, (command, result.stderr)
+    if wrapper_allows:
+        # It would run exactly the requested argv, nothing added or changed.
+        assert result.stdout.strip() == f"ALLOWED {command}"
 
 
 # --- CLI ------------------------------------------------------------------------------------

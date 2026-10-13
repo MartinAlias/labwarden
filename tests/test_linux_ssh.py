@@ -4,8 +4,6 @@ import json
 import logging
 import re
 import shlex
-import shutil
-import subprocess
 from collections.abc import Sequence
 from ipaddress import ip_address, ip_interface, ip_network
 from pathlib import Path
@@ -260,25 +258,20 @@ def test_wrapper_matches_the_collector_allowlist() -> None:
         assert pattern == executed  # it runs exactly what it matched, nothing more
 
 
-@pytest.mark.skipif(shutil.which("sh") is None, reason="needs a POSIX sh")
 @pytest.mark.parametrize(
     "requested",
     ["", "rm -rf /", "ip -j route; reboot", "ip -j route ", "ip -j route && id", "IP -j route"],
 )
-def test_wrapper_refuses_everything_else(requested: str) -> None:
-    # Absolute path: on POSIX, subprocess looks the program up in the *child's* PATH,
-    # which is deliberately empty here so the wrapper can't run any real command.
-    sh = shutil.which("sh")
-    assert sh is not None
-    result = subprocess.run(
-        [sh, str(WRAPPER)],
-        env={"SSH_ORIGINAL_COMMAND": requested, "PATH": "/nonexistent"},
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
+def test_wrapper_refuses_everything_else(requested: str, run_wrapper) -> None:
+    result = run_wrapper(requested)
     assert result.returncode == 126
     assert "not allowed" in result.stderr
+
+
+@pytest.mark.parametrize("argv", list(COMMANDS.values()), ids=lambda a: " ".join(a))
+def test_wrapper_runs_each_collector_command_verbatim(argv: tuple[str, ...], run_wrapper) -> None:
+    result = run_wrapper(shlex.join(argv))
+    assert result.returncode == 0 and result.stdout.strip() == f"ALLOWED {shlex.join(argv)}"
 
 
 def test_every_command_is_allowlisted_and_json_fixtures_parse() -> None:
