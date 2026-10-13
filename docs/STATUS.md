@@ -13,6 +13,7 @@ If the user says "continue where we left off" (or similar), do this:
 2. Work the way the user has preferred so far:
    - Build each step fully, with tests and fixtures, ruff-clean, with docs updated: this file, `docs/status.json`, the README, and the example config if relevant.
    - Then **ask before committing**. When the user says yes, commit *and push to `main`* and check that CI is green (`gh run list`).
+   - Watch CI after **every** push (`gh run watch <id> --exit-status`). Windows and Linux differ: Git's sh on Windows finds System32 binaries even with an empty PATH, so wrapper tests use the `run_wrapper` fixture in `tests/conftest.py`, which stubs `exec`.
    - Then offer the next step.
 3. **Don't** propose the live Pi-hole hookup (step 11) until everything else is done. The user asked for it to be last.
 4. Notes for step 7, learned in the last session:
@@ -38,7 +39,7 @@ If the user says "continue where we left off" (or similar), do this:
 | `manual` collector | `src/labwarden/collectors/manual.py` | Hand-declared inventory YAML. |
 | Config | `src/labwarden/config.py` | YAML + `${VAR}`/`${VAR:-default}` + `.env`. |
 | CLI | `src/labwarden/cli.py` | `version, plugins, check, collect, snapshots, show, diff`. |
-| Tests | `tests/` | 37 tests at end of Phase 0 (225 after the collectors, probes and MCP server). |
+| Tests | `tests/` | 37 tests at end of Phase 0 (233 after the collectors, probes and MCP server; CI green on Ubuntu + Windows). |
 | CI | `.github/workflows/ci.yml` | ruff + pytest, Ubuntu/Windows × py3.11–3.13. |
 
 ### Phase 1 – MVP 🚧 (in progress)
