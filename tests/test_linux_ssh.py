@@ -266,8 +266,12 @@ def test_wrapper_matches_the_collector_allowlist() -> None:
     ["", "rm -rf /", "ip -j route; reboot", "ip -j route ", "ip -j route && id", "IP -j route"],
 )
 def test_wrapper_refuses_everything_else(requested: str) -> None:
+    # Absolute path: on POSIX, subprocess looks the program up in the *child's* PATH,
+    # which is deliberately empty here so the wrapper can't run any real command.
+    sh = shutil.which("sh")
+    assert sh is not None
     result = subprocess.run(
-        ["sh", str(WRAPPER)],
+        [sh, str(WRAPPER)],
         env={"SSH_ORIGINAL_COMMAND": requested, "PATH": "/nonexistent"},
         capture_output=True,
         text=True,
