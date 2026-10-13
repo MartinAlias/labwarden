@@ -5,8 +5,10 @@ Guidance for AI coding sessions working on this repo.
 ## Start here
 
 1. Read [docs/STATUS.md](docs/STATUS.md). It says what's done and gives the ordered next steps.
+   If the user says "continue where we left off" (or similar), follow its **▶ Resume here** section.
 2. The full design is in [docs/PLAN.md](docs/PLAN.md). Follow it unless the user says otherwise.
-3. At the end of a session, update `docs/STATUS.md` (done items, next steps, date).
+3. At the end of a session, update `docs/STATUS.md` (done items, next steps, date, and
+   the **▶ Resume here** section, so the next session can start cold).
    Also update `docs/status.json`: the step and phase states, `updated` and `summary`.
    The portfolio site reads it publicly, so keep IPs, hostnames and lab details out of it.
 

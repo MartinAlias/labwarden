@@ -2,7 +2,7 @@
   "$comment": "Public-facing project progress, read by the portfolio site. Keep it in sync with docs/STATUS.md. No IPs, hostnames or other lab details.",
   "project": "LabWarden",
   "updated": "2026-10-13",
-  "summary": "Phase 0 complete. Phase 1 (MVP) in progress: four read-only collectors and safe, rate-limited network probes are done; the MCP server is next.",
+  "summary": "Phase 0 complete. Phase 1 (MVP) in progress: four read-only collectors, safe network probes and an MCP server (usable from Claude Desktop and Claude Code) are done; the built-in AI agent is next.",
   "current_phase": 1,
   "phases": [
     {
@@ -49,7 +49,8 @@
         },
         {
           "name": "MCP server",
-          "state": "planned"
+          "state": "done",
+          "completed": "2026-10-13"
         },
         {
           "name": "AI agent loop (Claude and local models)",

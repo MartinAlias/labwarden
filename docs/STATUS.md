@@ -5,7 +5,24 @@ end of every work session.** The full design is in [PLAN.md](PLAN.md).
 
 _Last updated: 2026-10-13_
 
-## Current phase: Phase 1 in progress (steps 1–5 of 11 done)
+## ▶ Resume here
+
+If the user says "continue where we left off" (or similar), do this:
+
+1. **Next task: Phase 1 step 7, the agent loop** (details under step 7 below). Steps 1–6 are done, committed and pushed to `main`.
+2. Work the way the user has preferred so far:
+   - Build each step fully, with tests and fixtures, ruff-clean, with docs updated: this file, `docs/status.json`, the README, and the example config if relevant.
+   - Then **ask before committing**. When the user says yes, commit *and push to `main`* and check that CI is green (`gh run list`).
+   - Then offer the next step.
+3. **Don't** propose the live Pi-hole hookup (step 11) until everything else is done. The user asked for it to be last.
+4. Notes for step 7, learned in the last session:
+   - Call the tools in-process through `LabToolkit(config).callables()` (`src/labwarden/toolkit.py`). Tool descriptions are the method docstrings. **Validate arguments yourself** (e.g. `pydantic.validate_call`), because only MCP calls get schema validation.
+   - Load the `claude-api` skill before writing Anthropic SDK code; its API facts beat memory. The SDK may be 1.x, built on `httpx2`. PLAN.md says the default model is `claude-sonnet-5-5`, with `claude-opus-5-5` for deep diagnosis; confirm the choice with the user.
+   - The `toolkit.ToolError` message is meant for the model: send it back as an `is_error` tool result.
+   - The `mcp` SDK is 2.x (`MCPServer`, not `FastMCP`). Check installed APIs instead of recalling them.
+5. Open user decisions (lab, not code): server specs (CPU/RAM/disk). Whether the ISP router forwards DNS to the Pi-hole is also unverified (see "The user's lab" below).
+
+## Current phase: Phase 1 in progress (steps 1–6 of 11 done)
 
 ### Phase 0 – Skeleton ✅ (done 2026-10-06)
 
@@ -21,7 +38,7 @@ _Last updated: 2026-10-13_
 | `manual` collector | `src/labwarden/collectors/manual.py` | Hand-declared inventory YAML. |
 | Config | `src/labwarden/config.py` | YAML + `${VAR}`/`${VAR:-default}` + `.env`. |
 | CLI | `src/labwarden/cli.py` | `version, plugins, check, collect, snapshots, show, diff`. |
-| Tests | `tests/` | 37 tests at end of Phase 0 (204 after the four collectors and the probes). |
+| Tests | `tests/` | 37 tests at end of Phase 0 (225 after the collectors, probes and MCP server). |
 | CI | `.github/workflows/ci.yml` | ruff + pytest, Ubuntu/Windows × py3.11–3.13. |
 
 ### Phase 1 – MVP 🚧 (in progress)
@@ -114,11 +131,29 @@ fixture outputs** (`tests/fixtures/<plugin>/...`), so no live devices are needed
    - Shared `labwarden/local_exec.py` (`run_local`) is now used by discovery and the probes.
    - CLI: `labwarden probe ping|traceroute|dns|tcp|http ... [--from TARGET] [--json]`. It exits 0 if ok, 1 if the probe failed, 2 for bad input.
    - 80 tests (204 total). Smoke-tested live from the dev PC: router ping, DNS and HTTPS all worked.
-6. **MCP server** (`src/labwarden/mcp_server/`). Uses the official `mcp` SDK (FastMCP) over stdio:
-   - Tools read the latest snapshot: inventory search, device get, subnets, routes, DNS, containers, firewall rules, snapshot diff.
-   - Plus probe tools.
-   - Add `labwarden mcp` CLI command and a Claude Desktop config snippet in the docs.
-   - CI test: assert no tool name starts with a mutating verb.
+6. ✅ **MCP server** (`src/labwarden/mcp_server/`, `src/labwarden/toolkit.py`, done 2026-10-13):
+   - **The `mcp` SDK is now 2.x:** `FastMCP` was renamed `MCPServer` (`mcp.server.mcpserver`), and `ToolAnnotations` fields are snake_case. Pinned `mcp>=1.10`, and 2.3.0 is installed.
+   - **`LabToolkit`** (`toolkit.py`) is the single implementation of every tool. Each is a method returning JSON-ready data, with an LLM-oriented docstring and `Annotated[..., Field(description=...)]` parameters. The MCP server registers them, and **step 7's agent loop should call `toolkit.callables()` in-process**.
+     - Calls through MCP are validated by the SDK.
+     - Direct in-process calls are *not*, so the agent loop must validate arguments itself, e.g. with `pydantic.validate_call` or a TypeAdapter built from the signature.
+   - 16 tools (names use `_` because Claude's tool names allow only `[A-Za-z0-9_-]`):
+     - `lab_summary`, `inventory_search`, `device_get` (by name **or IP**, so it returns every name for the same box, which partly covers the discovery identity gap)
+     - `network_subnets`, `routes_get`, `dns_records`, `docker_containers` (`exposed_ports`, `runs_as_root`), `services_list`, `firewall_rules`
+     - `snapshot_list`, `snapshot_diff`
+     - `probe_ping/traceroute/dns/tcp/http`, each with an optional `from_host`
+   - List results are capped (`limit`, max 200) with `count`/`truncated`.
+   - Annotations: every tool has `read_only_hint=True, destructive_hint=False`. Inventory tools are `open_world_hint=False`; probes are `True`.
+   - **Errors:** `toolkit.ToolError` subclasses the SDK's `ToolError`, which is the only exception whose message reaches the model (others become "Error executing tool X"). SSH failures in `from_host` probes are converted to `ToolError`.
+   - `lab_summary.blind_spots` ignores the `manual` collector: it "provides" everything but observes nothing.
+   - Server `instructions` give a workflow: summary first, then inventory, then probes, then cite evidence. It also explains that LabWarden can't change anything. There's a `labwarden://summary` resource.
+   - CLI: `labwarden mcp [--config]` runs over stdio. Setup for Claude Desktop and Claude Code is in **`docs/mcp.md`**.
+   - Not done yet: MCP *prompts* (they come with the playbooks in step 8) and the streamable-HTTP transport (with deploy, step 10).
+   - 21 tests in `tests/test_mcp_server.py`:
+     - the tool set equals `TOOLS`, and no name contains a mutating verb
+     - every tool is annotated read-only, and every tool and parameter has a description
+     - collector credentials never appear in any output
+     - each tool's behaviour, and errors reaching the model
+     - a **real stdio end-to-end session** against `labwarden mcp` in a subprocess
 7. **Agent loop** (`src/labwarden/agent/`):
    - Provider interface with `anthropic` (default `claude-sonnet-5-5`) and `openai_compat` (Ollama) adapters.
    - The same tools as the MCP server, called in-process.

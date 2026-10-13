@@ -113,6 +113,17 @@ def collect(
 
 
 @app.command()
+def mcp(config_path: ConfigOpt = None) -> None:
+    """Run the MCP server over stdio (for Claude Desktop, Claude Code, ...).
+
+    stdout carries the MCP protocol, so this command prints nothing else there.
+    """
+    from labwarden.mcp_server import build_server
+
+    build_server(_load(config_path)).run("stdio")
+
+
+@app.command()
 def snapshots(
     config_path: ConfigOpt = None,
     limit: Annotated[int, typer.Option(help="How many to show.")] = 20,
