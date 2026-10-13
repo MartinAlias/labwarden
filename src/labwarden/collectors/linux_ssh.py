@@ -49,7 +49,7 @@ import paramiko
 from pydantic import BaseModel, ConfigDict, SecretStr
 
 from labwarden.collectors.allowlist import CommandAllowlist
-from labwarden.collectors.base import Collector
+from labwarden.collectors.base import Collector, ReadOnlyViolation
 from labwarden.model.entities import (
     Address,
     Device,
@@ -105,19 +105,25 @@ class SshCommandError(Exception):
     """A required command failed on the remote host."""
 
 
-class _SshSession:
-    """One SSH connection that will only run allowlisted commands."""
+class SshSession:
+    """One SSH connection that will only run commands its allowlist accepts.
 
-    def __init__(self, opts: LinuxSshOptions, base_dir: Path) -> None:
+    Probes reuse this with their own allowlist (``labwarden.probes``).
+    """
+
+    def __init__(
+        self, opts: LinuxSshOptions, base_dir: Path, allowlist: CommandAllowlist = ALLOWLIST
+    ) -> None:
         self._opts = opts
         self._base_dir = base_dir
+        self._allowlist = allowlist
         self._client: paramiko.SSHClient | None = None
 
     def _path(self, path: Path) -> Path:
         path = path.expanduser()
         return path if path.is_absolute() else self._base_dir / path
 
-    def __enter__(self) -> _SshSession:
+    def __enter__(self) -> SshSession:
         opts = self._opts
         client = paramiko.SSHClient()
         if opts.known_hosts is not None:
@@ -156,11 +162,14 @@ class _SshSession:
             self._client.close()
 
     def run(self, argv: Sequence[str]) -> CommandResult:
-        ALLOWLIST.check(argv)  # the last check before anything leaves the process
+        self._allowlist.check(argv)  # the last check before anything leaves the process
+        command = " ".join(argv)
+        if shlex.join(argv) != command:
+            # The remote wrapper splits on plain spaces and never un-quotes, so an
+            # argument that needs quoting could never mean the same thing there.
+            raise ReadOnlyViolation(f"argument needs shell quoting: {list(argv)!r}")
         assert self._client is not None
-        stdin, stdout, stderr = self._client.exec_command(
-            shlex.join(argv), timeout=self._opts.timeout
-        )
+        stdin, stdout, stderr = self._client.exec_command(command, timeout=self._opts.timeout)
         stdin.close()
         out = stdout.read(MAX_OUTPUT_BYTES).decode("utf-8", "replace")
         err = stderr.read(64 * 1024).decode("utf-8", "replace")
@@ -183,7 +192,7 @@ class LinuxSshCollector(Collector):
     def collect(self) -> LabModel:
         if self._runner is not None:
             return self._collect_with(self._runner)
-        with _SshSession(self.options, self.base_dir) as session:
+        with SshSession(self.options, self.base_dir) as session:
             return self._collect_with(session.run)
 
     def _collect_with(self, run: Runner) -> LabModel:

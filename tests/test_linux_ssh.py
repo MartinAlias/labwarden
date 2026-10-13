@@ -237,7 +237,7 @@ class FakeSSHClient:
 def test_ssh_session_rejects_unknown_hosts_and_off_list_commands(monkeypatch) -> None:
     monkeypatch.setattr(paramiko, "SSHClient", FakeSSHClient)
     opts = LinuxSshOptions(host="192.168.20.10", key_file=Path("k"))
-    with linux_ssh._SshSession(opts, Path(".")) as session:
+    with linux_ssh.SshSession(opts, Path(".")) as session:
         client = FakeSSHClient.instances[-1]
         assert isinstance(client.policy, paramiko.RejectPolicy)
         assert client.connect_kwargs["allow_agent"] is False

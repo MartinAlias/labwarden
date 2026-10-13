@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated
 
@@ -17,12 +18,26 @@ from labwarden.collectors.runner import build_collector, run_collectors
 from labwarden.config import Config, ConfigError, find_config, load_config
 from labwarden.model.diff import LabDiff, diff_models
 from labwarden.model.store import Snapshot, SnapshotStore
+from labwarden.probes import (
+    ProbeResult,
+    dns_resolve,
+    http_head,
+    ping,
+    remote_executor,
+    tcp_connect,
+    traceroute,
+)
 
 app = typer.Typer(
     help="LabWarden: a read-only AI network & security engineer for your homelab.",
     no_args_is_help=True,
     add_completion=False,
 )
+probe_app = typer.Typer(
+    help="Run one safe, read-only network probe, locally or --from a linux_ssh target.",
+    no_args_is_help=True,
+)
+app.add_typer(probe_app, name="probe")
 console = Console()
 err = Console(stderr=True)
 
@@ -175,6 +190,121 @@ def diff(
             raise typer.Exit(1)
     console.print(f"Changes from #{old.id} to #{new.id}:")
     _print_diff(diff_models(old.model, new.model))
+
+
+FromOpt = Annotated[
+    str | None,
+    typer.Option("--from", help="Run from this linux_ssh target instead of locally."),
+]
+JsonOpt = Annotated[bool, typer.Option("--json", help="Print the full result as JSON.")]
+
+
+@probe_app.command("ping")
+def probe_ping(
+    host: str,
+    count: Annotated[int, typer.Option(help="Echo requests to send (1-5).")] = 3,
+    from_target: FromOpt = None,
+    config_path: ConfigOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Ping a host."""
+    _run_probe(ping, from_target, config_path, as_json, host, count=count)
+
+
+@probe_app.command("traceroute")
+def probe_traceroute(
+    host: str,
+    max_hops: Annotated[int, typer.Option(help="Maximum hops (1-30).")] = 20,
+    from_target: FromOpt = None,
+    config_path: ConfigOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Show the routers on the path to a host."""
+    _run_probe(traceroute, from_target, config_path, as_json, host, max_hops=max_hops)
+
+
+@probe_app.command("dns")
+def probe_dns(
+    name: str,
+    record_type: Annotated[
+        str, typer.Option("--type", help="Record type, e.g. A, AAAA, MX.")
+    ] = "A",
+    server: Annotated[
+        str | None, typer.Option(help="Ask this DNS server (IP) instead of the default.")
+    ] = None,
+    from_target: FromOpt = None,
+    config_path: ConfigOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Resolve a DNS name, optionally against one specific server."""
+    _run_probe(
+        dns_resolve, from_target, config_path, as_json, name, record_type=record_type, server=server
+    )
+
+
+@probe_app.command("tcp")
+def probe_tcp(
+    host: str,
+    port: int,
+    from_target: FromOpt = None,
+    config_path: ConfigOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Check whether a TCP port accepts connections (no data is sent)."""
+    _run_probe(tcp_connect, from_target, config_path, as_json, host, port)
+
+
+@probe_app.command("http")
+def probe_http(
+    url: str,
+    insecure: Annotated[
+        bool, typer.Option(help="Don't verify TLS certificates (local probes only).")
+    ] = False,
+    from_target: FromOpt = None,
+    config_path: ConfigOpt = None,
+    as_json: JsonOpt = False,
+) -> None:
+    """Send one HTTP HEAD request and report the status (redirects are not followed)."""
+    kwargs = {"verify_tls": False} if insecure else {}
+    _run_probe(http_head, from_target, config_path, as_json, url, **kwargs)
+
+
+def _run_probe(
+    fn: Callable[..., ProbeResult],
+    from_target: str | None,
+    config_path: Path | None,
+    as_json: bool,
+    *args: object,
+    **kwargs: object,
+) -> None:
+    try:
+        if from_target:
+            config = _load(config_path)
+            try:
+                executor = remote_executor(config, from_target)
+            except (LookupError, ValueError) as exc:
+                err.print(
+                    f"[red]Can't run from {escape(repr(from_target))}:[/red] {escape(str(exc))}"
+                )
+                raise typer.Exit(2) from exc
+            with executor as ex:
+                result = fn(*args, executor=ex, **kwargs)
+        else:
+            result = fn(*args, **kwargs)
+    except ValueError as exc:
+        err.print(f"[red]Invalid input:[/red] {escape(str(exc))}")
+        raise typer.Exit(2) from exc
+    except OSError as exc:  # SSH connection problems
+        err.print(f"[red]Connection failed:[/red] {escape(str(exc))}")
+        raise typer.Exit(1) from exc
+
+    if as_json:
+        console.print_json(result.model_dump_json())
+    else:
+        mark = "[green]ok[/green]" if result.ok else "[red]fail[/red]"
+        where = escape(f"from {result.source}, {result.duration_ms:g} ms")
+        console.print(f"{mark} {escape(result.summary)} [dim]({where})[/dim]", highlight=False)
+    raise typer.Exit(0 if result.ok else 1)
 
 
 def _get_snapshot(store: SnapshotStore, snapshot_id: int | None) -> Snapshot:

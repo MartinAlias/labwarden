@@ -35,7 +35,6 @@ from __future__ import annotations
 import logging
 import re
 import socket
-import subprocess
 import sys
 import threading
 import time
@@ -49,6 +48,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from labwarden.collectors.allowlist import CommandAllowlist
 from labwarden.collectors.base import Collector
+from labwarden.local_exec import CommandResult, run_local
 from labwarden.model.entities import Address, Device, DeviceKind, Interface, Service
 from labwarden.model.lab import LabModel
 
@@ -83,8 +83,6 @@ ALLOWLIST = CommandAllowlist(
     ]
 )
 
-#: (exit status, stdout, stderr)
-CommandResult = tuple[int, str, str]
 Runner = Callable[[Sequence[str]], CommandResult]
 
 #: Interface name used for MACs seen in the ARP table; the remote NIC's real name is unknown.
@@ -211,16 +209,7 @@ def _checked(run: Runner, argv: Sequence[str]) -> CommandResult:
 
 
 def _run_local(argv: Sequence[str]) -> CommandResult:
-    ALLOWLIST.check(argv)  # the last check before anything runs
-    try:
-        proc = subprocess.run(
-            list(argv), capture_output=True, text=True, timeout=600, check=False, shell=False
-        )
-    except FileNotFoundError:
-        return 127, "", f"{argv[0]}: command not found"
-    except subprocess.TimeoutExpired:
-        return 124, "", f"{argv[0]}: timed out"
-    return proc.returncode, proc.stdout, proc.stderr
+    return run_local(argv, ALLOWLIST)
 
 
 def _lookup_ptr(ip: str) -> str | None:

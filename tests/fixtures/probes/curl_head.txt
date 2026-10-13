@@ -1,0 +1,5 @@
+HTTP/1.1 301 Moved Permanently
+Location: https://jellyfin.lan/web/
+Server: nginx/1.27.2
+Content-Length: 0
+

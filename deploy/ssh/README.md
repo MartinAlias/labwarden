@@ -66,7 +66,21 @@ labwarden ALL=(root) NOPASSWD: /usr/sbin/nft -j list ruleset
 
 Check the path with `command -v nft`. Then set `nftables: true` in the target's options.
 
-## 6. Configure LabWarden
+## 6. Optional: tools for probes run from this host
+
+`labwarden probe ... --from <target>` runs ping, traceroute, DNS, TCP and HTTP
+checks *from this host*. The wrapper checks every argument of these commands
+by position, and nothing else can run. They need the tools installed:
+
+```sh
+sudo apt install iputils-ping traceroute bind9-dnsutils netcat-openbsd curl
+```
+
+If a tool is missing, the probe reports "not installed" instead of failing.
+After updating LabWarden, reinstall the wrapper (step 2) so it knows the
+current probe commands.
+
+## 7. Configure LabWarden
 
 ```yaml
 targets:

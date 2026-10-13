@@ -9,8 +9,9 @@ fix you apply yourself, and then verifies it. It also documents your lab and
 teaches you how to reach your goals with the hardware you already own.
 
 > **Status:** Phase 0 (foundation) is complete. Phase 1 (MVP) is in progress, and
-> all four read-only collectors are done: Pi-hole v6, Docker, Linux SSH and
-> network discovery. Probes, the MCP server and the AI agent come next. Progress is tracked in
+> all four read-only collectors (Pi-hole v6, Docker, Linux SSH, network
+> discovery) and the safe network probes are done. The MCP server and the AI
+> agent come next. Progress is tracked in
 > [docs/STATUS.md](docs/STATUS.md), with a machine-readable copy in
 > [docs/status.json](docs/status.json).
 
@@ -63,6 +64,7 @@ uv run labwarden diff       # what changed since the previous snapshot
 | `labwarden snapshots` | List snapshots, newest first |
 | `labwarden show [-s ID] [--kind devices]` | Summarize a snapshot, or dump one collection as JSON |
 | `labwarden diff [OLD] [NEW]` | What changed (default: the last two snapshots) |
+| `labwarden probe ping\|traceroute\|dns\|tcp\|http ... [--from TARGET]` | Run one safe, rate-limited probe locally, or from a `linux_ssh` host |
 
 All commands accept `--config/-c PATH` (default `./labwarden.yaml`, or `$LABWARDEN_CONFIG`).
 

@@ -5,7 +5,7 @@ end of every work session.** The full design is in [PLAN.md](PLAN.md).
 
 _Last updated: 2026-10-13_
 
-## Current phase: Phase 1 in progress (steps 1–4 of 11 done)
+## Current phase: Phase 1 in progress (steps 1–5 of 11 done)
 
 ### Phase 0 – Skeleton ✅ (done 2026-10-06)
 
@@ -21,7 +21,7 @@ _Last updated: 2026-10-13_
 | `manual` collector | `src/labwarden/collectors/manual.py` | Hand-declared inventory YAML. |
 | Config | `src/labwarden/config.py` | YAML + `${VAR}`/`${VAR:-default}` + `.env`. |
 | CLI | `src/labwarden/cli.py` | `version, plugins, check, collect, snapshots, show, diff`. |
-| Tests | `tests/` | 37 tests at end of Phase 0 (124 after the Pi-hole, Docker, Linux SSH and discovery collectors). |
+| Tests | `tests/` | 37 tests at end of Phase 0 (204 after the four collectors and the probes). |
 | CI | `.github/workflows/ci.yml` | ruff + pytest, Ubuntu/Windows × py3.11–3.13. |
 
 ### Phase 1 – MVP 🚧 (in progress)
@@ -94,7 +94,26 @@ fixture outputs** (`tests/fixtures/<plugin>/...`), so no live devices are needed
      - mDNS isn't implemented.
      - In Docker it needs `network_mode: host`; note this for step 10.
    - 30 tests in `tests/test_discovery.py`, with fixtures for `/proc/net/arp`, Windows and macOS `arp`, and nmap XML.
-5. **Probes** (`src/labwarden/probes/`): `ping`, `traceroute`, `dns_resolve(server=)`, `tcp_connect`, `http_head`. Each runs locally, or remotely via `linux_ssh` + allowlist. Rate-limited.
+5. ✅ **Probes** (`src/labwarden/probes/`, done 2026-10-13):
+   - Five probes: `ping`, `traceroute`, `dns_resolve(server=)`, `tcp_connect` and `http_head`.
+   - Each returns a `ProbeResult`: `ok`, a plain-English `summary` written for the LLM, `data`, `source` and `duration_ms`. Network failures become `ok=False`, never exceptions.
+   - **Inputs are validated strictly** (they become AI tools):
+     - hosts can't start with `-`, and IPs only for DNS servers
+     - record types are an allowlist
+     - URLs: http(s) only, no credentials or fragments, a restricted charset
+     - numbers are range-checked
+   - **Local:**
+     - ping and traceroute use the system tools (Linux, macOS and Windows `ping`/`tracert` variants). Windows "Destination host unreachable" doesn't count as a reply.
+     - DNS uses **dnspython** (new dependency), TCP uses `socket` and HTTP uses an httpx HEAD with a HEAD-only request hook. That means no extra binaries, and Windows works.
+   - **Remote (`--from <linux_ssh target>`):** `ping`, `traceroute`, `dig`, `nc -z` and `curl -I`, through `RemoteExecutor`, which reuses `SshSession` with `REMOTE_ALLOWLIST`.
+     - `SshSession` was renamed from `_SshSession` and now takes an allowlist.
+     - It now refuses any argv that would need shell quoting, because the wrapper splits on spaces and never un-quotes.
+   - **SSH wrapper** has a second section. It splits the command with globbing off, checks every argument by position (ranges without leading zeros, host/name/URL charsets, fixed flags), then `exec`s with explicit arguments. Nothing is eval'd.
+     - `tests/test_probes.py` runs **38 commands** through both `REMOTE_ALLOWLIST` and the real wrapper under `sh`, and requires them to agree.
+   - A shared **token-bucket rate limiter** (`DEFAULT_LIMITER`: 2/s, burst 5) applies to every probe in the process.
+   - Shared `labwarden/local_exec.py` (`run_local`) is now used by discovery and the probes.
+   - CLI: `labwarden probe ping|traceroute|dns|tcp|http ... [--from TARGET] [--json]`. It exits 0 if ok, 1 if the probe failed, 2 for bad input.
+   - 80 tests (204 total). Smoke-tested live from the dev PC: router ping, DNS and HTTPS all worked.
 6. **MCP server** (`src/labwarden/mcp_server/`). Uses the official `mcp` SDK (FastMCP) over stdio:
    - Tools read the latest snapshot: inventory search, device get, subnets, routes, DNS, containers, firewall rules, snapshot diff.
    - Plus probe tools.
@@ -129,7 +148,7 @@ What the user has (confirmed 2026-10-13):
 - **Endpoints**: PCs, phones, etc. The **admin PC is `vexd-pc`**, currently at 192.168.4.67.
 - **Firewall**: none yet. Recommended: OPNsense on a mini PC with 2+ Intel i226 NICs. The OPNsense collector is the first Phase 2 plugin.
 
-The current LAN is **192.168.4.x** (inferred from vexd-pc's IP; the router's address and the prefix are unconfirmed). The 192.168.1.x IPs in `examples/inventory.yaml` are placeholders and are wrong for this lab.
+The current LAN is **192.168.4.x**. The ISP router answers at **192.168.4.1** (pinged 2026-10-13); the prefix is unconfirmed. vexd-pc's system DNS resolver is **192.168.4.1** (the router), not the Pi-hole directly. The router may forward to the Pi-hole; check this. The 192.168.1.x IPs in `examples/inventory.yaml` are placeholders and are wrong for this lab.
 
 **Target design (draft v4, 2026-10-13):** https://claude.ai/artifact/4RDKRyGJjjQvpnq9azoqfu
 - Path: ONT → ISP router (bridge) → OPNsense → 802.1Q switch. The switch feeds a VLAN-capable AP and the Proxmox server (one trunk carrying 20/50/99).
