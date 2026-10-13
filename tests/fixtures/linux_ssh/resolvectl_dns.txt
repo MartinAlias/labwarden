@@ -1,0 +1,5 @@
+Global:
+Link 2 (enp1s0):
+Link 3 (enp1s0.20): 192.168.20.2
+Link 4 (docker0):
+Link 5 (wg0):

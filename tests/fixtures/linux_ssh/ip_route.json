@@ -1,0 +1,8 @@
+[
+  {"dst": "default", "gateway": "192.168.20.1", "dev": "enp1s0.20", "protocol": "dhcp", "prefsrc": "192.168.20.10", "metric": 100, "flags": []},
+  {"dst": "10.8.0.0/24", "dev": "wg0", "protocol": "kernel", "scope": "link", "prefsrc": "10.8.0.1", "flags": []},
+  {"dst": "172.17.0.0/16", "dev": "docker0", "protocol": "kernel", "scope": "link", "prefsrc": "172.17.0.1", "flags": ["linkdown"]},
+  {"dst": "192.168.20.0/24", "dev": "enp1s0.20", "protocol": "kernel", "scope": "link", "prefsrc": "192.168.20.10", "metric": 100, "flags": []},
+  {"dst": "192.168.20.1", "dev": "enp1s0.20", "protocol": "dhcp", "scope": "link", "prefsrc": "192.168.20.10", "metric": 100, "flags": []},
+  {"type": "blackhole", "dst": "10.99.0.0/16", "flags": []}
+]

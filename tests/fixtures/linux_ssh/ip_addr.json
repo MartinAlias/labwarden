@@ -1,0 +1,16 @@
+[
+  {"ifindex": 1, "ifname": "lo", "flags": ["LOOPBACK", "UP", "LOWER_UP"], "mtu": 65536, "operstate": "UNKNOWN", "link_type": "loopback", "address": "00:00:00:00:00:00",
+   "addr_info": [{"family": "inet", "local": "127.0.0.1", "prefixlen": 8, "scope": "host", "label": "lo"}, {"family": "inet6", "local": "::1", "prefixlen": 128, "scope": "host"}]},
+  {"ifindex": 2, "ifname": "enp1s0", "flags": ["BROADCAST", "MULTICAST", "UP", "LOWER_UP"], "mtu": 1500, "operstate": "UP", "link_type": "ether", "address": "02:00:00:00:10:01", "addr_info": []},
+  {"ifindex": 3, "ifname": "enp1s0.20", "link": "enp1s0", "flags": ["BROADCAST", "MULTICAST", "UP", "LOWER_UP"], "mtu": 1500, "operstate": "UP", "link_type": "ether", "address": "02:00:00:00:10:01",
+   "linkinfo": {"info_kind": "vlan", "info_data": {"protocol": "802.1Q", "id": 20, "flags": ["REORDER_HDR"]}},
+   "addr_info": [{"family": "inet", "local": "192.168.20.10", "prefixlen": 24, "broadcast": "192.168.20.255", "scope": "global", "dynamic": true, "label": "enp1s0.20", "valid_life_time": 85000, "preferred_life_time": 85000},
+                 {"family": "inet6", "local": "fe80::ff:fe00:1001", "prefixlen": 64, "scope": "link"}]},
+  {"ifindex": 4, "ifname": "docker0", "flags": ["NO-CARRIER", "BROADCAST", "MULTICAST", "UP"], "mtu": 1500, "operstate": "DOWN", "link_type": "ether", "address": "02:42:00:00:00:01",
+   "linkinfo": {"info_kind": "bridge", "info_data": {}},
+   "addr_info": [{"family": "inet", "local": "172.17.0.1", "prefixlen": 16, "scope": "global", "label": "docker0"}]},
+  {"ifindex": 5, "ifname": "wg0", "flags": ["POINTOPOINT", "NOARP", "UP", "LOWER_UP"], "mtu": 1420, "operstate": "UNKNOWN", "link_type": "none",
+   "linkinfo": {"info_kind": "wireguard"},
+   "addr_info": [{"family": "inet", "local": "10.8.0.1", "prefixlen": 24, "scope": "global", "label": "wg0"}]},
+  {"ifindex": 6, "ifname": "veth1a2b3c4", "flags": ["BROADCAST", "MULTICAST", "UP", "LOWER_UP"], "mtu": 1500, "operstate": "UP", "link_type": "ether", "address": "02:00:00:00:99:01", "addr_info": []}
+]

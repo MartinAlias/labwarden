@@ -44,6 +44,23 @@ class AcmeCollector(Collector):
 - **Remote commands.** If you run commands on a host, build argv lists and check them with a `CommandAllowlist` before running. Never use a shell.
 - **Credentials.** Document how to create a *read-only* account for your source.
 
+## Reusing the built-in safety helpers
+
+- **HTTP APIs.** Pass `read_only_guard(plugin, allowed_non_get=...)` from
+  `labwarden.collectors.http` as an httpx request hook. Every non-GET request
+  is then refused before it leaves the process. List any exception, such as a
+  session login, as an exact `(method, path)` pair and justify it in the
+  module docstring. Expose a `_transport` class attribute, so tests can swap
+  in `httpx.MockTransport`. Examples: `pihole.py`, `docker.py`.
+- **Commands over SSH.** Put every command in a module-level constant and
+  build a `CommandAllowlist` from it. Check each argv right before it's sent.
+  Mirror the list in the remote forced-command wrapper, and add a test that
+  keeps the two identical. Expose a `_runner` attribute, so tests can answer
+  commands from fixtures. Example: `linux_ssh.py` with `deploy/ssh/`.
+- **Pure parsers.** Keep the API/command-output → `LabModel` translation in
+  pure functions (`parse_pihole`, `parse_docker`, `parse_linux`), so most
+  tests need no fakes at all.
+
 ## Config
 
 ```yaml

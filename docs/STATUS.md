@@ -5,7 +5,7 @@ end of every work session.** The full design is in [PLAN.md](PLAN.md).
 
 _Last updated: 2026-10-13_
 
-## Current phase: Phase 1 in progress (steps 1–2 of 11 done)
+## Current phase: Phase 1 in progress (steps 1–3 of 11 done)
 
 ### Phase 0 – Skeleton ✅ (done 2026-10-06)
 
@@ -21,7 +21,7 @@ _Last updated: 2026-10-13_
 | `manual` collector | `src/labwarden/collectors/manual.py` | Hand-declared inventory YAML. |
 | Config | `src/labwarden/config.py` | YAML + `${VAR}`/`${VAR:-default}` + `.env`. |
 | CLI | `src/labwarden/cli.py` | `version, plugins, check, collect, snapshots, show, diff`. |
-| Tests | `tests/` | 37 tests at end of Phase 0 (78 after the Pi-hole and Docker collectors). |
+| Tests | `tests/` | 37 tests at end of Phase 0 (98 after the Pi-hole, Docker and Linux SSH collectors). |
 | CI | `.github/workflows/ci.yml` | ruff + pytest, Ubuntu/Windows × py3.11–3.13. |
 
 ### Phase 1 – MVP 🚧 (in progress)
@@ -52,10 +52,34 @@ fixture outputs** (`tests/fixtures/<plugin>/...`), so no live devices are needed
    - `Config.Env` and `Config.Labels` (where secrets live) are never copied into the model. A test proves this.
    - Known gap: every Docker host has `172.17.0.0/16`, and Subnet's key is the CIDR, so with two Docker hosts the second host's default bridge is dropped on merge. Revisit if multi-host matters.
    - 18 tests in `tests/test_docker.py`. Fixtures were written from the Engine API reference, not recorded from a live host; the Docker server isn't set up yet.
-3. **`linux_ssh` collector** (`collectors/linux_ssh.py`). Uses `asyncssh` or `paramiko` with key auth:
-   - Commands go through `CommandAllowlist`: `ip -j addr`, `ip -j route`, `ip -j link`, `ss -H -tulpn`, `resolvectl status`, `nft -j list ruleset` (optional; needs a sudoers entry).
-   - Maps to `interfaces`, `addresses`, `routes`, `services`, `firewall_rules` (nft parse can be minimal now; full parser is Phase 2).
-   - Also write `deploy/ssh/labwarden-ssh-wrapper.sh` (forced-command allowlist on the remote host) and `deploy/ssh/README.md` (how to create the `labwarden` user plus `authorized_keys` with `command=`).
+3. ✅ **`linux_ssh` collector** (`collectors/linux_ssh.py`, done 2026-10-13):
+   - Uses paramiko with key auth. `RejectPolicy` means unknown host keys are refused, never auto-trusted. Agent and default keys are disabled; only `key_file` is used.
+   - Every command is a constant in `COMMANDS`. `CommandAllowlist` checks it in the collector *and* in `_SshSession.run`, right before it's sent. Output is capped at 8 MB per command.
+   - Commands:
+     - `ip -d -j addr`
+     - `ip -j route` and `ip -j -6 route`
+     - `ss -H -tulpn`
+     - `cat /etc/os-release`
+     - `cat /etc/resolv.conf` and `resolvectl dns`
+     - opt-in `sudo -n nft -j list ruleset` (`nftables: true`)
+     - `ip -j link` was dropped, because `ip -d -j addr` already has the link data plus VLAN IDs. `cat /etc/resolv.conf` and `resolvectl dns` replace `resolvectl status`, which is unstable text.
+   - Maps to `devices` (os from os-release, `dns-server:` tags), `interfaces` (VLAN ID from `linkinfo`), `addresses`, `routes`, `services` and `firewall_rules`.
+     - `lo` and `veth*` are skipped to avoid diff noise.
+     - IPv6 link-local addresses and non-unicast routes are skipped.
+     - A `*` listen address becomes `::`.
+   - nftables parsing is minimal, as planned:
+     - It covers filter chains, the src/dst address and port matches, and each base chain's default policy, emitted as the last rule.
+     - Unknown matches go into `description`, so they never silently become "any".
+     - Jumps, NAT and log-only rules are skipped. The full parser is Phase 2.
+   - `deploy/ssh/labwarden-ssh-wrapper.sh` is the forced command. It runs only exact matches of the same command lines and exits 126 otherwise. `deploy/ssh/README.md` covers the user, `authorized_keys` with `restrict,command=`, host-key trust, the optional sudoers line and removal.
+   - 20 tests in `tests/test_linux_ssh.py`, covering:
+     - parsing every command
+     - nft rules
+     - fallbacks
+     - session safety (RejectPolicy, no agent, off-list commands never sent)
+     - the wrapper's case list matching `COMMANDS`
+     - the wrapper refusing injection attempts (it runs the real script under `sh`)
+   - Fixtures were written to match the output formats, not recorded from a live host.
 4. **`discovery` collector**: ARP table + ping sweep of configured subnets. nmap service scan is opt-in.
 5. **Probes** (`src/labwarden/probes/`): `ping`, `traceroute`, `dns_resolve(server=)`, `tcp_connect`, `http_head`. Each runs locally, or remotely via `linux_ssh` + allowlist. Rate-limited.
 6. **MCP server** (`src/labwarden/mcp_server/`). Uses the official `mcp` SDK (FastMCP) over stdio:

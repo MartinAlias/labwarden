@@ -29,10 +29,12 @@ targets:
   #   options:
   #     url: tcp://192.168.1.10:2375   # the proxy, not the Docker socket
   #
-  # Coming in Phase 1 (read-only):
+  # Linux hosts over SSH. The labwarden user is locked to a forced-command
+  # wrapper that only runs read-only commands. Setup: deploy/ssh/README.md
   # - name: docker-server-host
   #   plugin: linux_ssh
   #   options:
   #     host: 192.168.1.10
   #     user: labwarden
   #     key_file: ~/.ssh/labwarden_ed25519
+  #     # nftables: true                 # needs the sudoers line from the guide
