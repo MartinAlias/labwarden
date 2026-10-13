@@ -5,7 +5,7 @@ end of every work session.** The full design is in [PLAN.md](PLAN.md).
 
 _Last updated: 2026-10-13_
 
-## Current phase: Phase 1 in progress (step 1 of 10 done)
+## Current phase: Phase 1 in progress (steps 1–2 of 11 done)
 
 ### Phase 0 – Skeleton ✅ (done 2026-10-06)
 
@@ -21,7 +21,7 @@ _Last updated: 2026-10-13_
 | `manual` collector | `src/labwarden/collectors/manual.py` | Hand-declared inventory YAML. |
 | Config | `src/labwarden/config.py` | YAML + `${VAR}`/`${VAR:-default}` + `.env`. |
 | CLI | `src/labwarden/cli.py` | `version, plugins, check, collect, snapshots, show, diff`. |
-| Tests | `tests/` | 37 tests at end of Phase 0 (58 after the Pi-hole collector). |
+| Tests | `tests/` | 37 tests at end of Phase 0 (78 after the Pi-hole and Docker collectors). |
 | CI | `.github/workflows/ci.yml` | ruff + pytest, Ubuntu/Windows × py3.11–3.13. |
 
 ### Phase 1 – MVP 🚧 (in progress)
@@ -40,10 +40,18 @@ fixture outputs** (`tests/fixtures/<plugin>/...`), so no live devices are needed
    - DHCP static reservations (`dhcp.hosts`) aren't parsed yet.
    - 21 tests in `tests/test_pihole.py`. ⚠️ Fixtures were written from the FTL OpenAPI spec, **not recorded from a real Pi-hole**.
    - ⏸️ **Live Pi-hole setup is deferred to the very end of Phase 1, at the user's request (2026-10-13).** Nothing has been set up against the real Pi-hole: no app password, no `.env` entry, no `labwarden.yaml` target, no recorded fixtures. Don't suggest doing it before the other Phase 1 steps are finished. See the final step below.
-2. **`docker` collector** (`collectors/docker.py`). Talks HTTP to a **docker-socket-proxy** (`tcp://host:2375`), GET only:
-   - `/containers/json?all=1` and `/containers/{id}/json` (privileged, user, restart policy, ports, networks), plus `/networks`.
-   - Maps to `containers`, `subnets` (docker networks), `services`.
-   - Use plain `httpx`, not the docker SDK, so a mutating call can't happen by accident.
+2. ✅ **`docker` collector** (`collectors/docker.py`, done 2026-10-13):
+   - Plain `httpx` to docker-socket-proxy. `tcp://` URLs become `http://`; `unix://` is rejected on purpose. Every non-GET call is refused by the shared `read_only_guard`, which now lives in `collectors/http.py` and is used by both collectors.
+   - Reads `/containers/json?all=1`, then `/containers/{id}/json` for each container. Also reads `/networks` and `/version`; both are optional and skipped with a warning when the proxy returns 403. A blocked `/containers` is an error that names `CONTAINERS=1`.
+   - Maps to `containers`, `services`, `subnets` and `devices`:
+     - `containers`: image, state, networks, ports, privileged, user, restart policy.
+     - `services`: published host ports of running containers, with `process=docker:<name>`.
+     - `subnets`: one per Docker network, named `docker:<host>/<network>`.
+     - `devices`: the host, with the engine version as `os`.
+   - Stopped containers report their *configured* port bindings, so stopping one doesn't show as "port removed" in diffs.
+   - `Config.Env` and `Config.Labels` (where secrets live) are never copied into the model. A test proves this.
+   - Known gap: every Docker host has `172.17.0.0/16`, and Subnet's key is the CIDR, so with two Docker hosts the second host's default bridge is dropped on merge. Revisit if multi-host matters.
+   - 18 tests in `tests/test_docker.py`. Fixtures were written from the Engine API reference, not recorded from a live host; the Docker server isn't set up yet.
 3. **`linux_ssh` collector** (`collectors/linux_ssh.py`). Uses `asyncssh` or `paramiko` with key auth:
    - Commands go through `CommandAllowlist`: `ip -j addr`, `ip -j route`, `ip -j link`, `ss -H -tulpn`, `resolvectl status`, `nft -j list ruleset` (optional; needs a sudoers entry).
    - Maps to `interfaces`, `addresses`, `routes`, `services`, `firewall_rules` (nft parse can be minimal now; full parser is Phase 2).

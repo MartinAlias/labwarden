@@ -7,6 +7,7 @@ from functools import cache
 from importlib.metadata import entry_points
 
 from labwarden.collectors.base import Collector
+from labwarden.collectors.docker import DockerCollector
 from labwarden.collectors.manual import ManualCollector
 from labwarden.collectors.pihole import PiholeCollector
 
@@ -15,6 +16,7 @@ ENTRY_POINT_GROUP = "labwarden.collectors"
 log = logging.getLogger(__name__)
 
 _BUILTINS: dict[str, type[Collector]] = {
+    DockerCollector.plugin: DockerCollector,
     ManualCollector.plugin: ManualCollector,
     PiholeCollector.plugin: PiholeCollector,
 }

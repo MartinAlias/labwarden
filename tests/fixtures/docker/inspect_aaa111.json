@@ -1,0 +1,9 @@
+{
+  "Id": "aaa111", "Name": "/jellyfin", "Image": "sha256:1111",
+  "State": {"Status": "running", "Running": true},
+  "Config": {"Image": "jellyfin/jellyfin:10.9.11", "User": "1000:1000", "ExposedPorts": {"8096/tcp": {}, "8920/tcp": {}}, "Env": ["TZ=Etc/UTC"], "Labels": {}},
+  "HostConfig": {"Privileged": false, "NetworkMode": "media", "RestartPolicy": {"Name": "unless-stopped", "MaximumRetryCount": 0},
+                 "PortBindings": {"8096/tcp": [{"HostIp": "", "HostPort": "8096"}]}},
+  "NetworkSettings": {"Ports": {"8096/tcp": [{"HostIp": "0.0.0.0", "HostPort": "8096"}, {"HostIp": "::", "HostPort": "8096"}], "8920/tcp": null},
+                      "Networks": {"media": {"IPAddress": "172.20.0.2"}}}
+}

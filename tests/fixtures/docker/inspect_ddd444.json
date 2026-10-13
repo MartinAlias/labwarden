@@ -1,0 +1,10 @@
+{
+  "Id": "ddd444", "Name": "/old-db", "Image": "sha256:4444",
+  "State": {"Status": "exited", "Running": false},
+  "Config": {"Image": "postgres:16", "User": "", "ExposedPorts": {"5432/tcp": {}},
+             "Env": ["POSTGRES_PASSWORD=FIXTURE-SECRET-DO-NOT-LEAK", "PGDATA=/var/lib/postgresql/data"],
+             "Labels": {"traefik.http.middlewares.auth.basicauth.users": "admin:FIXTURE-SECRET-DO-NOT-LEAK"}},
+  "HostConfig": {"Privileged": false, "NetworkMode": "bridge", "RestartPolicy": {"Name": "no", "MaximumRetryCount": 0},
+                 "PortBindings": {"5432/tcp": [{"HostIp": "", "HostPort": "5432"}]}},
+  "NetworkSettings": {"Ports": {}, "Networks": {"bridge": {"IPAddress": ""}}}
+}

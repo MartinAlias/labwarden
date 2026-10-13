@@ -1,0 +1,7 @@
+[
+  {"Name": "bridge", "Id": "n1", "Driver": "bridge", "IPAM": {"Driver": "default", "Options": null, "Config": [{"Subnet": "172.17.0.0/16", "Gateway": "172.17.0.1"}]}},
+  {"Name": "host", "Id": "n2", "Driver": "host", "IPAM": {"Driver": "default", "Options": null, "Config": []}},
+  {"Name": "none", "Id": "n3", "Driver": "null", "IPAM": {"Driver": "default", "Options": null, "Config": null}},
+  {"Name": "media", "Id": "n4", "Driver": "bridge", "IPAM": {"Driver": "default", "Options": {}, "Config": [{"Subnet": "172.20.0.0/16", "Gateway": "172.20.0.1"}]}},
+  {"Name": "labwarden", "Id": "n5", "Driver": "bridge", "IPAM": {"Driver": "default", "Options": {}, "Config": [{"Subnet": "172.21.0.0/16"}]}}
+]

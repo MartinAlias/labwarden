@@ -1,0 +1,6 @@
+[
+  {"Id": "aaa111", "Names": ["/jellyfin"], "Image": "jellyfin/jellyfin:10.9.11", "State": "running", "Status": "Up 3 days"},
+  {"Id": "bbb222", "Names": ["/dockerproxy"], "Image": "tecnativa/docker-socket-proxy:0.3.0", "State": "running", "Status": "Up 3 days"},
+  {"Id": "ccc333", "Names": ["/cadvisor"], "Image": "gcr.io/cadvisor/cadvisor:v0.49.1", "State": "running", "Status": "Up 3 days"},
+  {"Id": "ddd444", "Names": ["/old-db"], "Image": "postgres:16", "State": "exited", "Status": "Exited (0) 2 weeks ago"}
+]

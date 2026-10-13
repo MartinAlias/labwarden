@@ -2,7 +2,7 @@
   "$comment": "Public-facing project progress, read by the portfolio site. Keep it in sync with docs/STATUS.md. No IPs, hostnames or other lab details.",
   "project": "LabWarden",
   "updated": "2026-10-13",
-  "summary": "Phase 0 complete. Phase 1 (MVP) in progress: the read-only Pi-hole v6 collector is done.",
+  "summary": "Phase 0 complete. Phase 1 (MVP) in progress: read-only Pi-hole and Docker collectors are done.",
   "current_phase": 1,
   "phases": [
     {
@@ -22,21 +22,68 @@
       "name": "MVP",
       "state": "in_progress",
       "steps": [
-        { "name": "Pi-hole v6 collector", "state": "done", "completed": "2026-10-13" },
-        { "name": "Docker collector (via GET-only socket proxy)", "state": "planned" },
-        { "name": "Linux SSH collector (forced-command allowlist)", "state": "planned" },
-        { "name": "Network discovery collector", "state": "planned" },
-        { "name": "Safe network probes", "state": "planned" },
-        { "name": "MCP server", "state": "planned" },
-        { "name": "AI agent loop (Claude and local models)", "state": "planned" },
-        { "name": "Diagnosis playbooks", "state": "planned" },
-        { "name": "Documentation generator", "state": "planned" },
-        { "name": "Setup wizard and Docker Compose deploy", "state": "planned" },
-        { "name": "Live hookup to the home lab Pi-hole", "state": "planned" }
+        {
+          "name": "Pi-hole v6 collector",
+          "state": "done",
+          "completed": "2026-10-13"
+        },
+        {
+          "name": "Docker collector (via GET-only socket proxy)",
+          "state": "done",
+          "completed": "2026-10-13"
+        },
+        {
+          "name": "Linux SSH collector (forced-command allowlist)",
+          "state": "planned"
+        },
+        {
+          "name": "Network discovery collector",
+          "state": "planned"
+        },
+        {
+          "name": "Safe network probes",
+          "state": "planned"
+        },
+        {
+          "name": "MCP server",
+          "state": "planned"
+        },
+        {
+          "name": "AI agent loop (Claude and local models)",
+          "state": "planned"
+        },
+        {
+          "name": "Diagnosis playbooks",
+          "state": "planned"
+        },
+        {
+          "name": "Documentation generator",
+          "state": "planned"
+        },
+        {
+          "name": "Setup wizard and Docker Compose deploy",
+          "state": "planned"
+        },
+        {
+          "name": "Live hookup to the home lab Pi-hole",
+          "state": "planned"
+        }
       ]
     },
-    { "number": 2, "name": "Firewall and verify", "state": "planned" },
-    { "number": 3, "name": "Teach and UI", "state": "planned" },
-    { "number": 4, "name": "Ecosystem", "state": "planned" }
+    {
+      "number": 2,
+      "name": "Firewall and verify",
+      "state": "planned"
+    },
+    {
+      "number": 3,
+      "name": "Teach and UI",
+      "state": "planned"
+    },
+    {
+      "number": 4,
+      "name": "Ecosystem",
+      "state": "planned"
+    }
   ]
 }

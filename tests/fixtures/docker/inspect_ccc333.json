@@ -1,0 +1,7 @@
+{
+  "Id": "ccc333", "Name": "/cadvisor", "Image": "sha256:3333",
+  "State": {"Status": "running", "Running": true},
+  "Config": {"Image": "gcr.io/cadvisor/cadvisor:v0.49.1", "User": "", "ExposedPorts": {"8080/tcp": {}}, "Env": [], "Labels": {}},
+  "HostConfig": {"Privileged": true, "NetworkMode": "host", "RestartPolicy": {"Name": "always", "MaximumRetryCount": 0}, "PortBindings": {}},
+  "NetworkSettings": {"Ports": {}, "Networks": {"host": {"IPAddress": ""}}}
+}

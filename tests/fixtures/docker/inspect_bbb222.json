@@ -1,0 +1,9 @@
+{
+  "Id": "bbb222", "Name": "/dockerproxy", "Image": "sha256:2222",
+  "State": {"Status": "running", "Running": true},
+  "Config": {"Image": "tecnativa/docker-socket-proxy:0.3.0", "User": "", "ExposedPorts": {"2375/tcp": {}}, "Env": ["CONTAINERS=1", "NETWORKS=1", "POST=0"], "Labels": {}},
+  "HostConfig": {"Privileged": false, "NetworkMode": "labwarden", "RestartPolicy": {"Name": "unless-stopped", "MaximumRetryCount": 0},
+                 "PortBindings": {"2375/tcp": [{"HostIp": "127.0.0.1", "HostPort": "2375"}]}},
+  "NetworkSettings": {"Ports": {"2375/tcp": [{"HostIp": "127.0.0.1", "HostPort": "2375"}]},
+                      "Networks": {"labwarden": {"IPAddress": "172.21.0.2"}}}
+}

@@ -20,6 +20,7 @@ labwarden = "labwarden.cli:app"
 #   [project.entry-points."labwarden.collectors"]
 #   myvendor = "my_package.collector:MyVendorCollector"
 [project.entry-points."labwarden.collectors"]
+docker = "labwarden.collectors.docker:DockerCollector"
 manual = "labwarden.collectors.manual:ManualCollector"
 pihole = "labwarden.collectors.pihole:PiholeCollector"
 

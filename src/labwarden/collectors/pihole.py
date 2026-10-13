@@ -49,7 +49,8 @@ from urllib.parse import urlsplit
 import httpx
 from pydantic import BaseModel, ConfigDict, SecretStr, field_validator
 
-from labwarden.collectors.base import Collector, ReadOnlyViolation
+from labwarden.collectors.base import Collector
+from labwarden.collectors.http import read_only_guard
 from labwarden.model.entities import Address, Device, DeviceKind, DhcpScope, DnsRecord, Subnet
 from labwarden.model.lab import LabModel
 
@@ -83,13 +84,8 @@ class PiholeError(Exception):
     """The Pi-hole answered, but not with something we can use."""
 
 
-def _guard_request(request: httpx.Request) -> None:
-    """Refuse every request that isn't a GET, except session login/logout."""
-    if request.method == "GET":
-        return
-    if request.method in ("POST", "DELETE") and request.url.path == AUTH_PATH:
-        return
-    raise ReadOnlyViolation(f"pihole collector refused {request.method} {request.url.path}")
+# Refuse every request that isn't a GET, except session login/logout.
+_guard_request = read_only_guard("pihole", [("POST", AUTH_PATH), ("DELETE", AUTH_PATH)])
 
 
 class PiholeCollector(Collector):

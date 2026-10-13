@@ -22,12 +22,14 @@ targets:
   #     password: ${PIHOLE_PASSWORD}     # put PIHOLE_PASSWORD=... in .env
   #     # verify_tls: false              # only for https:// with the self-signed cert
   #
-  # Coming in Phase 1 (read-only):
+  # Docker, read through tecnativa/docker-socket-proxy (CONTAINERS=1 NETWORKS=1
+  # POST=0). LabWarden never touches /var/run/docker.sock itself.
   # - name: docker-server
   #   plugin: docker
   #   options:
-  #     url: tcp://192.168.1.10:2375   # docker-socket-proxy, GET-only
+  #     url: tcp://192.168.1.10:2375   # the proxy, not the Docker socket
   #
+  # Coming in Phase 1 (read-only):
   # - name: docker-server-host
   #   plugin: linux_ssh
   #   options:
